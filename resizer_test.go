@@ -161,6 +161,59 @@ func TestResizeCustomSizes(t *testing.T) {
 	}
 }
 
+func TestResizeShrinkOnLoadBoundaryCase(t *testing.T) {
+	img := image.NewGray16(image.Rect(0, 0, 1440, 959))
+	bufJpeg := &bytes.Buffer{}
+	jpeg.Encode(bufJpeg, img, nil)
+
+	bufWebp, err := Read("testdata/test_shrink_on_load_boundary_case_1440x959.webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	images := []struct {
+		format ImageType
+		buf    []byte
+	}{
+		{JPEG, bufJpeg.Bytes()},
+		{WEBP, bufWebp},
+	}
+
+	interpolators := []Interpolator{
+		Bicubic,
+		Bilinear,
+		Nohalo,
+		Nearest,
+	}
+
+	opts := Options{Crop: true, Width: 265, Height: 200}
+
+	for _, source := range images {
+		for _, interpolator := range interpolators {
+			opts.Interpolator = interpolator
+			newImg, err := Resize(source.buf, opts)
+			if err != nil {
+				t.Fatalf("Resize(imgData, %#v) error: %#v", opts, err)
+			}
+
+			size, _ := Size(newImg)
+			if size.Width != opts.Width {
+				t.Fatalf("Invalid width: %d", size.Width)
+			}
+			if size.Height != opts.Height {
+				t.Fatalf("Invalid height: %d", size.Height)
+			}
+
+			switch source.format {
+			case WEBP:
+				Write(fmt.Sprintf("testdata/test_shrink_on_load_boundary_case_%s_out.webp", opts.Interpolator.String()), newImg)
+			case JPEG:
+				Write(fmt.Sprintf("testdata/test_shrink_on_load_boundary_case_%s_out.jpg", opts.Interpolator.String()), newImg)
+			}
+		}
+	}
+}
+
 func TestResizePrecision(t *testing.T) {
 	// see https://github.com/h2non/bimg/issues/99
 	img := image.NewGray16(image.Rect(0, 0, 1920, 1080))

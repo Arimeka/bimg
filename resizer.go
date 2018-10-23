@@ -413,27 +413,46 @@ func shrinkOnLoad(buf []byte, input *C.VipsImage, imageType ImageType, factor fl
 	var image *C.VipsImage
 	var err error
 
-	// Reload input using shrink-on-load
-	if imageType == JPEG && shrink >= 2 {
-		shrinkOnLoad := 1
-		// Recalculate integral shrink and double residual
+	// Fail fast
+	// Check image type
+	switch imageType {
+	case JPEG, WEBP:
+	default:
+		return nil, 0, fmt.Errorf("%v doesn't support shrink on load", ImageTypeName(imageType))
+	}
+
+	if shrink >= 2 {
+		// depending on interpolation libvips may rounding size to smaller number
+		// It may produce errors on the boundary cases
+		// so make sure shrink is enough bigger than shrinkOnLoad
+		shrink = shrink - 1
+	}
+
+	// jpeg can shrink-on-load only by 1,2,4,8
+	if imageType == JPEG {
 		switch {
 		case shrink >= 8:
+			shrink = 8
 			factor = factor / 8
-			shrinkOnLoad = 8
 		case shrink >= 4:
 			factor = factor / 4
-			shrinkOnLoad = 4
+			shrink = 4
 		case shrink >= 2:
 			factor = factor / 2
-			shrinkOnLoad = 2
+			shrink = 2
+		default:
+			shrink = 1
 		}
+	}
 
-		image, err = vipsShrinkJpeg(buf, input, shrinkOnLoad)
-	} else if imageType == WEBP {
+	switch imageType {
+	case JPEG:
+		image, err = vipsShrinkJpeg(buf, input, shrink)
+	case WEBP:
 		image, err = vipsShrinkWebp(buf, input, shrink)
-	} else {
-		return nil, 0, fmt.Errorf("%v doesn't support shrink on load", ImageTypeName(imageType))
+	default:
+		// In case something went wrong
+		image = input
 	}
 
 	return image, factor, err
