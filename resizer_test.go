@@ -162,9 +162,17 @@ func TestResizeCustomSizes(t *testing.T) {
 }
 
 func TestResizeShrinkOnLoadBoundaryCase(t *testing.T) {
-	img := image.NewGray16(image.Rect(0, 0, 1440, 959))
-	bufJpeg := &bytes.Buffer{}
-	jpeg.Encode(bufJpeg, img, nil)
+	img1440x959 := image.NewGray16(image.Rect(0, 0, 1440, 959))
+	bufJpeg1440x959 := &bytes.Buffer{}
+	jpeg.Encode(bufJpeg1440x959, img1440x959, nil)
+
+	img1440x1015 := image.NewGray16(image.Rect(0, 0, 1440, 1015))
+	bufJpeg1440x1015 := &bytes.Buffer{}
+	jpeg.Encode(bufJpeg1440x1015, img1440x1015, nil)
+
+	img1440x1012 := image.NewGray16(image.Rect(0, 0, 1440, 1012))
+	bufJpeg1440x1012 := &bytes.Buffer{}
+	jpeg.Encode(bufJpeg1440x1012, img1440x1012, nil)
 
 	bufWebp, err := Read("testdata/test_shrink_on_load_boundary_case_1440x959.webp")
 	if err != nil {
@@ -175,7 +183,9 @@ func TestResizeShrinkOnLoadBoundaryCase(t *testing.T) {
 		format ImageType
 		buf    []byte
 	}{
-		{JPEG, bufJpeg.Bytes()},
+		{JPEG, bufJpeg1440x959.Bytes()},
+		{JPEG, bufJpeg1440x1015.Bytes()},
+		{JPEG, bufJpeg1440x1012.Bytes()},
 		{WEBP, bufWebp},
 	}
 
